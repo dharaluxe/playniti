@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Playniti — Admin Console</title>
+  <link rel="stylesheet" href="../site/css/styles.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script defer src="../site/config/config.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="nav">
+      <strong>Admin Console</strong>
+      <div id="authArea">
+        <button class="btn" onclick="login()">Admin Login</button>
+      </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:20px">
+      <div class="card">
+        <h3>Pending Deposits</h3>
+        <table class="table" id="depTable">
+          <thead><tr><th>User</th><th>Amount</th><th>Ref</th><th>Proof</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Pending Withdrawals</h3>
+        <table class="table" id="wdTable">
+          <thead><tr><th>User</th><th>Amount</th><th>UPI</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script>
+let app, auth, db, adminEmail;
+
+function init(){
+  const cfg = window.PLAYNITI_CONFIG;
+  adminEmail = cfg.adminEmail;
+  app = firebase.initializeApp(cfg.firebase);
+  auth = firebase.auth();
+  db = firebase.firestore();
+
+  auth.onAuthStateChanged(u => {
+    const el = document.getElementById('authArea');
+    if(!u){
+      el.innerHTML = '<button class="btn" onclick="login()">Admin Login</button>';
+      return;
+    }
+    if (u.email !== adminEmail) {
+      alert('Not admin. Sign out.');
+      auth.signOut();
+      return;
+    }
+    el.innerHTML = '<small>'+u.email+'</small> <button class="btn" style="background:#1a2a48" onclick="logout()">Logout</button>';
+    loadQueues();
+  });
+}
+
+function login(){
+  const email = prompt('Admin email:');
+  const pass = prompt('Password:');
+  if(!email || !pass) return;
+  auth.signInWithEmailAndPassword(email, pass).catch(e=>alert(e.message));
+}
+function logout(){ auth.signOut(); }
+
+async function loadQueues(){
+  // Deposits
+  db.collection('deposit_requests').where('status','==','PENDING')
+    .onSnapshot((snap)=>{
+      const tb = document.querySelector('#depTable tbody'); tb.innerHTML='';
+      snap.forEach(doc=>{
+        const r = doc.data();
+        tb.innerHTML += `<tr>
+          <td>${r.email}</td><td>${r.amount_nc}</td><td>${r.ref_id}</td>
+          <td><a href="${r.screenshot_url}" target="_blank">View</a></td>
+          <td>
+            <button class="btn" onclick="approveDeposit('${doc.id}', '${r.uid}', ${r.amount_nc})">Approve</button>
+            <button class="btn" style="background:#2a3b61" onclick="rejectDeposit('${doc.id}')">Reject</button>
+          </td>
+        </tr>`;
+      });
+    });
+  // Withdrawals
+  db.collection('withdrawal_requests').where('status','==','PENDING')
+    .onSnapshot((snap)=>{
+      const tb = document.querySelector('#wdTable tbody'); tb.innerHTML='';
+      snap.forEach(doc=>{
+        const r = doc.data();
+        tb.innerHTML += `<tr>
+          <td>${r.email}</td><td>${r.amount_nc}</td><td>${r.upi_id}</td><td>${r.status}</td>
+          <td>
+            <button class="btn" onclick="markWdPaid('${doc.id}', '${r.uid}', ${r.amount_nc})">Mark Paid</button>
+            <button class="btn" style="background:#2a3b61" onclick="rejectWd('${doc.id}')">Reject</button>
+          </td>
+        </tr>`;
+      });
+    });
+}
+
+async function approveDeposit(docId, uid, amount){
+  if (!confirm('Approve deposit?')) return;
+  const userRef = db.collection('users').doc(uid);
+  await db.runTransaction(async (tx)=>{
+    const snap = await tx.get(userRef);
+    const bal = (snap.data()?.balance_nc || 0) + amount;
+    tx.update(userRef, { balance_nc: bal });
+    const led = db.collection('ledger').doc();
+    tx.set(led, { uid, type:'DEPOSIT', amount_nc: amount, after: bal, note:'QR approved', created_at: firebase.firestore.FieldValue.serverTimestamp() });
+    tx.update(db.collection('deposit_requests').doc(docId), { status:'APPROVED' });
+  });
+  alert('Deposit approved & balance updated.');
+}
+
+async function rejectDeposit(docId){
+  if (!confirm('Reject deposit?')) return;
+  await db.collection('deposit_requests').doc(docId).update({ status:'REJECTED' });
+  alert('Deposit rejected.');
+}
+
+async function markWdPaid(docId, uid, amount){
+  if (!confirm('Mark withdrawal paid? Ensure UPI transfer is done.')) return;
+  const userRef = db.collection('users').doc(uid);
+  await db.runTransaction(async (tx)=>{
+    const snap = await tx.get(userRef);
+    const bal = (snap.data()?.balance_nc || 0) - amount;
+    if (bal < -0.001) throw new Error('Insufficient balance on record.');
+    tx.update(userRef, { balance_nc: bal });
+    const led = db.collection('ledger').doc();
+    tx.set(led, { uid, type:'WITHDRAWAL', amount_nc: -amount, after: bal, note:'UPI paid', created_at: firebase.firestore.FieldValue.serverTimestamp() });
+    tx.update(db.collection('withdrawal_requests').doc(docId), { status:'PAID' });
+  });
+  alert('Withdrawal marked paid & balance deducted.');
+}
+
+async function rejectWd(docId){
+  if (!confirm('Reject withdrawal?')) return;
+  await db.collection('withdrawal_requests').doc(docId).update({ status:'REJECTED' });
+  alert('Withdrawal rejected.');
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>

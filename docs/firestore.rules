@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() {
+      // Admin allowed email(s). Replace with your admin email(s).
+      return request.auth != null && request.auth.token.email in [
+        "admin@playniti.com"
+      ];
+    }
+
+    // Users collection
+    match /users/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid || isAdmin();
+      allow write: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isAdmin(); // Admin may adjust (e.g., KYC or balance fixes via functions)
+    }
+
+    // Wallet ledger (read-only for users)
+    match /ledger/{doc} {
+      allow create: if isAdmin();
+      allow read: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // Deposit requests (created by users, reviewed by admin)
+    match /deposit_requests/{docId} {
+      allow create: if isSignedIn();
+      allow read: if isSignedIn();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Withdrawal requests
+    match /withdrawal_requests/{docId} {
+      allow create: if isSignedIn();
+      allow read: if isSignedIn();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Configs (public read)
+    match /configs/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

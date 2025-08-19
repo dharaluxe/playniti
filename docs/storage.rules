@@ -1,0 +1,23 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email in [
+        "admin@playniti.com"
+      ];
+    }
+
+    // Allow users to upload proofs into deposit_proofs/{uid}/... only for their own UID
+    match /deposit_proofs/{uid}/{allPaths=**} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+      allow write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Public assets (e.g., game assets)
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Playniti",
+  "short_name": "Playniti",
+  "start_url": "/site/index.html",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#5b8cff",
+  "icons": []
+}
