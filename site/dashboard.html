@@ -1,129 +1,241 @@
-<script>
-let sb, user, adminEmail;
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Playniti — Dashboard</title>
 
-async function init() {
-  const cfg = window.PLAYNITI_SUPABASE;   // <- use your supabase config
-  if (!cfg) { alert('Missing config.js'); return; }
+  <!-- 1) LOAD CONFIG FIRST (defines window.PLAYNITI_SUPABASE) -->
+  <script src="/config/config.js"></script>
 
-  adminEmail = cfg.adminEmail;
-  sb = supabase.createClient(cfg.url, cfg.anonKey);
+  <!-- 2) SUPABASE SDK (UMD build) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
-  // auth state
-  const { data: { user: u } } = await sb.auth.getUser();
-  user = u;
-  renderAuth();
+  <!-- styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="nav">
+      <a href="index.html"><strong>← Playniti</strong></a>
+      <div id="authArea">
+        <button class="btn" onclick="showLogin()">Login / Sign up</button>
+      </div>
+    </div>
 
-  // load data if logged in
-  if (user) {
+    <div class="grid" style="grid-template-columns:2fr 1fr;gap:20px">
+      <div>
+        <div class="card">
+          <h2>Wallet</h2>
+          <div id="wallet">
+            <p><strong>Balance:</strong> <span id="balance">—</span> NC</p>
+            <div style="display:flex; gap:10px;flex-wrap:wrap">
+              <button class="btn" onclick="openAddNC()">Add NC (QR)</button>
+              <button class="btn" style="background:#1a2a48" onclick="openWithdraw()">Withdraw</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" id="historyCard">
+          <h3>Recent Activity</h3>
+          <table class="table" id="ledgerTable">
+            <thead><tr><th>When</th><th>Type</th><th>Amount</th><th>Note</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3>Quick Links</h3>
+          <p><a href="game.html">Play Sarp Niti (Demo)</a></p>
+          <p><a href="#wallet">Add NC</a></p>
+          <p><a href="#">Join official lobby (coming soon)</a></p>
+        </div>
+        <div class="card">
+          <h3>Profile</h3>
+          <div id="profile"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add NC Modal -->
+  <div id="addNcModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5)">
+    <div class="card" style="max-width:520px;margin:40px auto">
+      <h3>Add Niti Coins (QR)</h3>
+      <div id="qrOptions"></div>
+      <div class="hr"></div>
+      <label class="label">Amount (NC)</label>
+      <input class="input" id="depAmount" placeholder="e.g., 200">
+      <label class="label">UPI Ref / Transaction ID</label>
+      <input class="input" id="depRef" placeholder="e.g., 3245XXXXXX">
+      <label class="label">Upload Screenshot</label>
+      <input class="input" type="file" id="depFile" accept="image/*">
+      <div style="display:flex;gap:10px;margin-top:10px">
+        <button class="btn" onclick="submitDeposit()">Submit</button>
+        <button class="btn" style="background:#1a2a48" onclick="closeAddNC()">Close</button>
+      </div>
+      <small>Admin will verify and credit NC shortly.</small>
+    </div>
+  </div>
+
+  <!-- Withdraw Modal -->
+  <div id="wdModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5)">
+    <div class="card" style="max-width:520px;margin:40px auto">
+      <h3>Withdraw</h3>
+      <label class="label">Amount (NC)</label>
+      <input class="input" id="wdAmount" placeholder="e.g., 150">
+      <label class="label">UPI ID</label>
+      <input class="input" id="wdUpi" placeholder="name@upi">
+      <div style="display:flex;gap:10px;margin-top:10px">
+        <button class="btn" onclick="submitWithdraw()">Request</button>
+        <button class="btn" style="background:#1a2a48" onclick="closeWithdraw()">Close</button>
+      </div>
+      <small>Admin will process UPI transfer manually.</small>
+    </div>
+  </div>
+
+  <script>
+  let sb, user, adminEmail;
+
+  async function init() {
+    const cfg = window.PLAYNITI_SUPABASE;
+    if (!cfg) { alert('Missing config.js'); return; }
+
+    adminEmail = cfg.adminEmail;
+    sb = supabase.createClient(cfg.url, cfg.anonKey);
+
+    // auth state
+    const { data: { user: u } } = await sb.auth.getUser();
+    user = u;
+    renderAuth();
+
+    // render QR options (if any in config)
+    const qrWrap = document.getElementById('qrOptions');
+    qrWrap.innerHTML = '';
+    (cfg.qrUPI?.options || []).forEach(o => {
+      qrWrap.innerHTML += `
+        <div class="card" style="display:flex;gap:12px;align-items:center">
+          <img src="${o.img}" width="100">
+          <div><strong>${o.label}</strong><br><small>Scan & pay, then submit proof below.</small></div>
+        </div>`;
+    });
+
+    if (user) {
+      await ensureProfile();
+      await loadProfile();
+      await loadLedger();
+    }
+  }
+
+  function renderAuth() {
+    const el = document.getElementById('authArea');
+    if (!user) {
+      el.innerHTML = '<button class="btn" onclick="showLogin()">Login / Sign up</button>';
+    } else {
+      el.innerHTML = '<small>'+ (user.email||'') +'</small> <button class="btn" style="background:#1a2a48" onclick="logout()">Logout</button>';
+    }
+  }
+
+  async function ensureProfile() {
+    await sb.from('profiles')
+      .upsert([{ id: user.id, email: user.email }], { onConflict: 'id' });
+  }
+
+  async function loadProfile() {
+    const { data } = await sb.from('profiles').select('balance_nc').eq('id', user.id).single();
+    document.getElementById('balance').textContent = ((data?.balance_nc)||0).toFixed(2);
+    document.getElementById('profile').innerHTML =
+      `<div><strong>${user.email||''}</strong><br><small>UID: ${user.id}</small></div>`;
+  }
+
+  async function loadLedger() {
+    const { data, error } = await sb
+      .from('ledger')
+      .select('created_at,type,amount_nc,note')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending:false })
+      .limit(20);
+    if (error) { console.error(error); return; }
+    const tbody = document.querySelector('#ledgerTable tbody');
+    tbody.innerHTML = '';
+    (data||[]).forEach(r => {
+      const when = r.created_at ? new Date(r.created_at).toLocaleString() : '';
+      tbody.innerHTML += `<tr><td>${when}</td><td>${r.type}</td><td>${r.amount_nc}</td><td>${r.note||''}</td></tr>`;
+    });
+  }
+
+  async function showLogin(){
+    const email = prompt('Email:'); if (!email) return;
+    const pass  = prompt('Password (new users can create here):'); if (!pass) return;
+
+    let { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error && /Invalid login/i.test(error.message)) {
+      const res = await sb.auth.signUp({ email, password: pass });
+      if (res.error) return alert(res.error.message);
+      data = res.data;
+    } else if (error) {
+      return alert(error.message);
+    }
+    user = data.user;
+    renderAuth();
     await ensureProfile();
     await loadProfile();
     await loadLedger();
   }
-}
 
-function renderAuth() {
-  const el = document.getElementById('authArea');
-  if (!user) {
-    el.innerHTML = '<button class="btn" onclick="showLogin()">Login / Sign up</button>';
-  } else {
-    el.innerHTML = `<small>${user.email||''}</small>
-      <button class="btn" style="background:#1a2a48" onclick="logout()">Logout</button>`;
+  async function logout(){
+    await sb.auth.signOut();
+    user = null;
+    renderAuth();
+    document.getElementById('balance').textContent = '—';
+    document.querySelector('#ledgerTable tbody').innerHTML = '';
+    document.getElementById('profile').innerHTML = '';
   }
-}
 
-async function ensureProfile() {
-  await sb.from('profiles')
-    .upsert([{ id: user.id, email: user.email }], { onConflict: 'id' });
-}
+  function openAddNC(){ document.getElementById('addNcModal').style.display='block'; }
+  function closeAddNC(){ document.getElementById('addNcModal').style.display='none'; }
+  function openWithdraw(){ document.getElementById('wdModal').style.display='block'; }
+  function closeWithdraw(){ document.getElementById('wdModal').style.display='none'; }
 
-async function loadProfile() {
-  const { data } = await sb.from('profiles').select('balance_nc').eq('id', user.id).single();
-  document.getElementById('balance').textContent = ((data?.balance_nc)||0).toFixed(2);
-  document.getElementById('profile').innerHTML =
-    `<div><strong>${user.email||''}</strong><br><small>UID: ${user.id}</small></div>`;
-}
+  async function submitDeposit(){
+    if (!user) return alert('Login first');
+    const amount = parseFloat(document.getElementById('depAmount').value||'0');
+    const ref    = document.getElementById('depRef').value.trim();
+    const file   = document.getElementById('depFile').files[0];
+    if (amount<=0 || !ref || !file) return alert('Fill amount, ref and screenshot');
 
-async function loadLedger() {
-  const { data } = await sb.from('ledger')
-    .select('created_at,type,amount_nc,note')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending:false })
-    .limit(20);
-  const tbody = document.querySelector('#ledgerTable tbody');
-  tbody.innerHTML = '';
-  (data||[]).forEach(r => {
-    const when = r.created_at ? new Date(r.created_at).toLocaleString() : '';
-    tbody.innerHTML += `<tr><td>${when}</td><td>${r.type}</td><td>${r.amount_nc}</td><td>${r.note||''}</td></tr>`;
-  });
-}
+    // Upload to Supabase Storage bucket "proofs" (make it public once in Dashboard)
+    const path = `${user.id}/${Date.now()}_${file.name}`;
+    const up = await sb.storage.from('proofs').upload(path, file, { upsert:false });
+    if (up.error) return alert(up.error.message);
+    const { data: pub } = sb.storage.from('proofs').getPublicUrl(path);
 
-async function showLogin(){
-  const email = prompt('Email:'); if (!email) return;
-  const pass  = prompt('Password (new users can create here):'); if (!pass) return;
-
-  let { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
-  if (error && error.message.includes('Invalid login')) {
-    // try sign up
-    const res = await sb.auth.signUp({ email, password: pass });
-    if (res.error) return alert(res.error.message);
-    data = res.data;
-  } else if (error) {
-    return alert(error.message);
+    const { error } = await sb.from('deposit_requests').insert({
+      user_id: user.id, email: user.email, amount_nc: amount,
+      ref_id: ref, screenshot_url: pub.publicUrl, status: 'PENDING'
+    });
+    if (error) return alert(error.message);
+    alert('Submitted. Admin will verify shortly.');
+    closeAddNC();
   }
-  user = data.user;
-  renderAuth();
-  await ensureProfile();
-  await loadProfile();
-  await loadLedger();
-}
 
-async function logout(){
-  await sb.auth.signOut();
-  user = null;
-  renderAuth();
-  document.getElementById('balance').textContent = '—';
-  document.querySelector('#ledgerTable tbody').innerHTML = '';
-  document.getElementById('profile').innerHTML = '';
-}
+  async function submitWithdraw(){
+    if (!user) return alert('Login first');
+    const amount = parseFloat(document.getElementById('wdAmount').value||'0');
+    const upi    = document.getElementById('wdUpi').value.trim();
+    if (amount<=0 || !upi) return alert('Fill amount and UPI ID');
 
-function openAddNC(){ document.getElementById('addNcModal').style.display='block'; }
-function closeAddNC(){ document.getElementById('addNcModal').style.display='none'; }
-function openWithdraw(){ document.getElementById('wdModal').style.display='block'; }
-function closeWithdraw(){ document.getElementById('wdModal').style.display='none'; }
+    const { error } = await sb.from('withdrawal_requests').insert({
+      user_id: user.id, email: user.email, amount_nc: amount, upi_id: upi, status: 'PENDING'
+    });
+    if (error) return alert(error.message);
+    alert('Withdrawal requested. Admin will process via UPI.');
+    closeWithdraw();
+  }
 
-async function submitDeposit(){
-  if (!user) return alert('Login first');
-  const amount = parseFloat(document.getElementById('depAmount').value||'0');
-  const ref    = document.getElementById('depRef').value.trim();
-  const file   = document.getElementById('depFile').files[0];
-  if (amount<=0 || !ref || !file) return alert('Fill amount, ref and screenshot');
-
-  // upload to Supabase Storage (create a public bucket named "proofs" once)
-  const path = `${user.id}/${Date.now()}_${file.name}`;
-  const up = await sb.storage.from('proofs').upload(path, file, { upsert:false });
-  if (up.error) return alert(up.error.message);
-  const { data: pub } = sb.storage.from('proofs').getPublicUrl(path);
-
-  const { error } = await sb.from('deposit_requests').insert({
-    user_id: user.id, email: user.email, amount_nc: amount,
-    ref_id: ref, screenshot_url: pub.publicUrl, status: 'PENDING'
-  });
-  if (error) return alert(error.message);
-  alert('Submitted. Admin will verify shortly.'); closeAddNC();
-}
-
-async function submitWithdraw(){
-  if (!user) return alert('Login first');
-  const amount = parseFloat(document.getElementById('wdAmount').value||'0');
-  const upi    = document.getElementById('wdUpi').value.trim();
-  if (amount<=0 || !upi) return alert('Fill amount and UPI ID');
-
-  const { error } = await sb.from('withdrawal_requests').insert({
-    user_id: user.id, email: user.email, amount_nc: amount, upi_id: upi, status: 'PENDING'
-  });
-  if (error) return alert(error.message);
-  alert('Withdrawal requested. Admin will process via UPI.'); closeWithdraw();
-}
-
-window.addEventListener('load', init);
-</script>
+  window.addEventListener('load', init);
+  </script>
+</body>
+</html>
