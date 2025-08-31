@@ -18,7 +18,7 @@ export default function Freeplay() {
         <option value="sarpniti">Sarp Niti</option>
         <option value="climb">Climb</option>
         <option value="colormatch">Colormatch</option>
-        <option value="targettaps">TargetTaps</option>
+        <option value="targettaps">Targettaps</option>
         <option value="whackmole">WhackMole</option>
       </select>
 
