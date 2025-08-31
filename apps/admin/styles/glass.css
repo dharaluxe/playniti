@@ -1,0 +1,3 @@
+@import url('../../web/styles/glass.css');
+/* Override accents for Admin */
+:root{ --accent:#ffb86b; --neon:#ffd479; }

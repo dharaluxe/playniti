@@ -1,0 +1,19 @@
+erDiagram
+  profiles ||--o| wallets : has
+  profiles ||--o{ user_passes : owns
+  profiles ||--o{ leaderboards : posts
+  profiles ||--o{ room_participants : plays
+  profiles ||--o| creator_profiles : may_have
+  profiles ||--o{ redemptions : requests
+
+  passes ||--o{ user_passes : grants
+
+  events ||--o{ rooms : contains
+  rooms ||--o{ room_participants : hosts
+  rooms ||--o| matches : has
+  matches ||--o{ match_inputs : records
+
+  tournament_rooms ||--o{ tournament_entries : joins
+  tournament_rooms ||--o| tournament_prize_escrows : escrows
+
+  voucher_catalog ||--o{ redemptions : issues

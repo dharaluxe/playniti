@@ -1,0 +1,139 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Playniti API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/ads/config": {
+      "get": {
+        "summary": "Get ad config",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/pass/list": {
+      "get": {
+        "summary": "List passes",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/pass/purchase": {
+      "post": {
+        "summary": "Purchase pass",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/access/consume": {
+      "post": {
+        "summary": "Consume entry",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/event/list": {
+      "get": {
+        "summary": "List events",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/lobby/list": {
+      "get": {
+        "summary": "List lobbies",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/creator/tourney/create": {
+      "post": {
+        "summary": "Create tournament",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/creator/tourney/escrow": {
+      "post": {
+        "summary": "Escrow coins for tournament",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/creator/tourney/entry": {
+      "post": {
+        "summary": "Join tournament",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/wallet": {
+      "get": {
+        "summary": "Get wallet",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/redeem/voucher": {
+      "post": {
+        "summary": "Redeem coins to voucher",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/admin/metrics": {
+      "get": {
+        "summary": "Admin metrics",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/admin/voucher/generate": {
+      "post": {
+        "summary": "Generate voucher",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}

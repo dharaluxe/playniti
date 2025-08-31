@@ -1,0 +1,119 @@
+{
+  "info": {
+    "name": "Playniti API",
+    "_postman_id": "playniti-collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Profile",
+      "request": {
+        "method": "GET",
+        "url": "{{API_BASE_URL}}/api/auth/profile",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "00000000-0000-0000-0000-000000000003"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Get Ads Config",
+      "request": {
+        "method": "GET",
+        "url": "{{API_BASE_URL}}/api/ads/config"
+      }
+    },
+    {
+      "name": "List Passes",
+      "request": {
+        "method": "GET",
+        "url": "{{API_BASE_URL}}/api/pass/list"
+      }
+    },
+    {
+      "name": "Purchase Pass",
+      "request": {
+        "method": "POST",
+        "url": "{{API_BASE_URL}}/api/pass/purchase"
+      }
+    },
+    {
+      "name": "Consume Entry",
+      "request": {
+        "method": "POST",
+        "url": "{{API_BASE_URL}}/api/access/consume"
+      }
+    },
+    {
+      "name": "List Events",
+      "request": {
+        "method": "GET",
+        "url": "{{API_BASE_URL}}/api/event/list"
+      }
+    },
+    {
+      "name": "List Lobbies",
+      "request": {
+        "method": "GET",
+        "url": "{{API_BASE_URL}}/api/lobby/list"
+      }
+    },
+    {
+      "name": "Create Tournament",
+      "request": {
+        "method": "POST",
+        "url": "{{API_BASE_URL}}/api/creator/tourney/create"
+      }
+    },
+    {
+      "name": "Tournament Escrow",
+      "request": {
+        "method": "POST",
+        "url": "{{API_BASE_URL}}/api/creator/tourney/escrow"
+      }
+    },
+    {
+      "name": "Tournament Entry",
+      "request": {
+        "method": "POST",
+        "url": "{{API_BASE_URL}}/api/creator/tourney/entry"
+      }
+    },
+    {
+      "name": "Get Wallet",
+      "request": {
+        "method": "GET",
+        "url": "{{API_BASE_URL}}/api/wallet"
+      }
+    },
+    {
+      "name": "Redeem Voucher",
+      "request": {
+        "method": "POST",
+        "url": "{{API_BASE_URL}}/api/redeem/voucher"
+      }
+    },
+    {
+      "name": "Admin Metrics",
+      "request": {
+        "method": "GET",
+        "url": "{{API_BASE_URL}}/api/admin/metrics"
+      }
+    },
+    {
+      "name": "Generate Voucher",
+      "request": {
+        "method": "POST",
+        "url": "{{API_BASE_URL}}/api/admin/voucher/generate"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "API_BASE_URL",
+      "value": "http://localhost:4000"
+    }
+  ]
+}

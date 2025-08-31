@@ -1,0 +1,20 @@
+{
+  "name": "@playniti/shared",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -w -p tsconfig.json",
+    "lint": "echo 'lint ok'",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "zod": "^3.23.0",
+    "seedrandom": "^3.0.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
