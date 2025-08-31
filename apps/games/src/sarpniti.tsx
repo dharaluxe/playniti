@@ -1,52 +1,72 @@
-import React, { useCallback, useRef, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import GameCanvas from "./GameCanvas";
 
-export default function Sarpniti() {
-  const once = useRef(false);
+type Props = { onEnd?: (score: number) => void };
 
+export default function Sarpniti({ onEnd }: Props) {
+  const [time, setTime] = useState(60);
+  const [score, setScore] = useState(0);
+  const ended = useRef(false);
+
+  // 60s countdown
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTime((t) => {
+        const nt = t - 1;
+        if (nt <= 0 && !ended.current) {
+          ended.current = true;
+          clearInterval(id);
+          onEnd?.(score);
+          return 0;
+        }
+        return nt;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [onEnd, score]);
+
+  // draw frame
   const draw = useCallback((ctx: CanvasRenderingContext2D, t: number) => {
     const { width, height } = ctx.canvas;
-
-    // 🔎 first frame: log canvas size (should be > 0)
-    if (!once.current) {
-      // eslint-disable-next-line no-console
-      console.log("SARP canvas size:", { width, height, t });
-      once.current = true;
-    }
-
-    // background
-    ctx.save();
+    // bg
     ctx.fillStyle = "#0b1224";
     ctx.fillRect(0, 0, width, height);
 
-    // cross-hair
-    ctx.strokeStyle = "#384b81";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, height / 2);
-    ctx.lineTo(width, height / 2);
-    ctx.moveTo(width / 2, 0);
-    ctx.lineTo(width / 2, height);
-    ctx.stroke();
+    // moving target
+    const x = (Math.sin(t) * 0.45 + 0.5) * (width - 120);
+    const y = (Math.cos(t * 0.8) * 0.45 + 0.5) * (height - 120);
+    ctx.fillStyle = "#ff4d4f";
+    ctx.fillRect(x, y, 120, 120);
 
-    // center text
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "24px ui-sans-serif, system-ui, -apple-system";
-    ctx.textAlign = "center";
-    ctx.fillText("DRAW LOOP OK", width / 2, height / 2 - 40);
+    // HUD
+    ctx.fillStyle = "#fff";
+    ctx.font = "20px ui-sans-serif, system-ui";
+    ctx.fillText(`Score: ${score}`, 20, 30);
+    ctx.fillText(`Time: ${time}`, 20, 60);
 
-    // moving RED square (very obvious)
-    const x = (Math.sin(t) * 0.45 + 0.5) * (width - 160);
-    const y = (Math.cos(t * 0.8) * 0.45 + 0.5) * (height - 160);
-    ctx.fillStyle = "rgb(255, 77, 79)";
-    ctx.fillRect(x, y, 160, 160);
-
-    // border to show canvas bounds
+    // border
     ctx.strokeStyle = "#79ffe1";
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 3;
     ctx.strokeRect(2, 2, width - 4, height - 4);
-    ctx.restore();
+  }, [score, time]);
+
+  // tap/click to score
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const inc = () => setScore((s) => s + 1);
+    el.addEventListener("click", inc);
+    el.addEventListener("touchstart", inc, { passive: true });
+    return () => {
+      el.removeEventListener("click", inc);
+      el.removeEventListener("touchstart", inc);
+    };
   }, []);
 
-  return <GameCanvas draw={draw} />;
+  return (
+    <div ref={containerRef}>
+      <GameCanvas draw={draw} />
+    </div>
+  );
 }
