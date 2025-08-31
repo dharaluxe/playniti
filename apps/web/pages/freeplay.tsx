@@ -5,7 +5,7 @@ import { useState } from "react";
 const Sarpniti   = dynamic(() => import("@playniti/games").then(m => m.Sarpniti), { ssr: false });
 const Climb = dynamic(() => import("@playniti/games").then(m => m.Climb), { ssr: false });
 const Colormatch = dynamic(() => import("@playniti/games").then(m => m.Colormatch), { ssr: false });
-const Targettaps = dynamic(() => import("@playniti/games").then(m => m.TargetTaps), { ssr: false });
+const Targettaps = dynamic(() => import("@playniti/games").then(m => m.Targettaps), { ssr: false });
 const Whackmole  = dynamic(() => import("@playniti/games").then(m => m.WhackMole), { ssr: false });
 
 export default function Freeplay() {
