@@ -4,7 +4,7 @@ import { useState } from "react";
 // Lazy load each game only on client
 const Sarpniti   = dynamic(() => import("@playniti/games").then(m => m.Sarpniti), { ssr: false });
 const Climb = dynamic(() => import("@playniti/games").then(m => m.Climb), { ssr: false });
-const Colormatch = dynamic(() => import("@playniti/games").then(m => m.ColorMatch), { ssr: false });
+const Colormatch = dynamic(() => import("@playniti/games").then(m => m.Colormatch), { ssr: false });
 const Targettaps = dynamic(() => import("@playniti/games").then(m => m.TargetTaps), { ssr: false });
 const Whackmole  = dynamic(() => import("@playniti/games").then(m => m.WhackMole), { ssr: false });
 
@@ -17,7 +17,7 @@ export default function Freeplay() {
       <select onChange={(e) => setGame(e.target.value)} value={game}>
         <option value="sarpniti">Sarp Niti</option>
         <option value="climb">Climb</option>
-        <option value="colormatch">ColorMatch</option>
+        <option value="colormatch">Colormatch</option>
         <option value="targettaps">TargetTaps</option>
         <option value="whackmole">WhackMole</option>
       </select>
