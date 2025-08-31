@@ -1,33 +1,28 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 
-// Lazy load each game only on client
-const Sarpniti   = dynamic(() => import("@playniti/games").then(m => m.Sarpniti), { ssr: false });
-const Climb = dynamic(() => import("@playniti/games").then(m => m.Climb), { ssr: false });
+const Sarpniti   = dynamic(() => import("@playniti/games").then(m => m.Sarpniti),   { ssr: false });
+const Climb      = dynamic(() => import("@playniti/games").then(m => m.Climb),      { ssr: false });
 const Colormatch = dynamic(() => import("@playniti/games").then(m => m.Colormatch), { ssr: false });
 const Targettaps = dynamic(() => import("@playniti/games").then(m => m.Targettaps), { ssr: false });
-const Whackmole  = dynamic(() => import("@playniti/games").then(m => m.Whackmole), { ssr: false });
+const Whackmole  = dynamic(() => import("@playniti/games").then(m => m.Whackmole),  { ssr: false });
 
 export default function Freeplay() {
   const [game, setGame] = useState("sarpniti");
+  const View = game==="sarpniti"?Sarpniti:game==="climb"?Climb:game==="colormatch"?Colormatch:game==="targettaps"?Targettaps:Whackmole;
 
   return (
     <main style={{ padding: 24 }}>
       <h2>Freeplay (Ads enabled, no prizes)</h2>
-      <select onChange={(e) => setGame(e.target.value)} value={game}>
+      <select value={game} onChange={(e)=>setGame(e.target.value)}>
         <option value="sarpniti">Sarp Niti</option>
         <option value="climb">Climb</option>
         <option value="colormatch">Colormatch</option>
-        <option value="targettaps">Targettaps</option>
+        <option value="targettaps">TargetTaps</option>
         <option value="whackmole">WhackMole</option>
       </select>
-
       <div style={{ marginTop: 16 }}>
-        {game === "sarpniti"   && <Sarpniti />}
-        {game === "climb"      && <Climb />}
-        {game === "colormatch" && <Colormatch />}
-        {game === "targettaps" && <Targettaps />}
-        {game === "whackmole"  && <Whackmole />}
+        <View />
       </div>
     </main>
   );
