@@ -8,7 +8,6 @@ export default function Sarpniti({ onEnd }: Props) {
   const [score, setScore] = useState(0);
   const ended = useRef(false);
 
-  // 60s countdown
   useEffect(() => {
     const id = setInterval(() => {
       setTime((t) => {
@@ -25,10 +24,9 @@ export default function Sarpniti({ onEnd }: Props) {
     return () => clearInterval(id);
   }, [onEnd, score]);
 
-  // draw frame
   const draw = useCallback((ctx: CanvasRenderingContext2D, t: number) => {
     const { width, height } = ctx.canvas;
-    // bg
+    // clear bg (container already dark, but keep to avoid trails)
     ctx.fillStyle = "#0b1224";
     ctx.fillRect(0, 0, width, height);
 
@@ -38,19 +36,13 @@ export default function Sarpniti({ onEnd }: Props) {
     ctx.fillStyle = "#ff4d4f";
     ctx.fillRect(x, y, 120, 120);
 
-    // HUD
+    // HUD (top-left)
     ctx.fillStyle = "#fff";
     ctx.font = "20px ui-sans-serif, system-ui";
-    ctx.fillText(`Score: ${score}`, 20, 30);
-    ctx.fillText(`Time: ${time}`, 20, 60);
-
-    // border
-    ctx.strokeStyle = "#79ffe1";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(2, 2, width - 4, height - 4);
+    ctx.fillText(`Score: ${score}`, 16, 28);
+    ctx.fillText(`Time: ${time}`, 16, 56);
   }, [score, time]);
 
-  // tap/click to score
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = containerRef.current;
@@ -66,7 +58,8 @@ export default function Sarpniti({ onEnd }: Props) {
 
   return (
     <div ref={containerRef}>
-      <GameCanvas draw={draw} />
+      {/* aspectRatio prop se frame control: 16/9 ya 4/3 try kar sakte ho */}
+      <GameCanvas draw={draw} aspectRatio={16 / 9} />
     </div>
   );
 }
